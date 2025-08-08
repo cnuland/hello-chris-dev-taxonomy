@@ -138,7 +138,7 @@ python3 submit_pipeline.py \
 
 ### Method 2: Private Repository
 ```bash
-# Update the taxonomy-repo-secret first
+# Update the taxonomy-repo-secret first (do NOT commit secrets to Git)
 oc create secret generic taxonomy-repo-secret \
   --from-literal=username="your-github-username" \
   --from-literal=password="ghp_your-personal-access-token" \
@@ -146,6 +146,26 @@ oc create secret generic taxonomy-repo-secret \
 
 # Then submit pipeline
 python3 submit_pipeline.py --repo-url "https://github.com/your-org/private-taxonomy.git"
+```
+
+### Required Secrets (out-of-band)
+Before running pipelines, create the following Kubernetes Secrets in the petloan-instructlab namespace:
+
+- Taxonomy repo credentials (for private repos):
+```bash
+oc create secret generic taxonomy-repo-secret \
+  --from-literal=username="<your-git-username>" \
+  --from-literal=password="<your-git-token-or-password>" \
+  -n petloan-instructlab --dry-run=client -o yaml | oc apply -f -
+```
+
+- S3/MinIO credentials (referenced by manifests as s3-credentials):
+```bash
+oc create secret generic s3-credentials \
+  --from-literal=AWS_ACCESS_KEY_ID="<your-access-key-id>" \
+  --from-literal=AWS_SECRET_ACCESS_KEY="<your-secret-access-key>" \
+  --from-literal=AWS_DEFAULT_REGION="<your-region>" \
+  -n petloan-instructlab --dry-run=client -o yaml | oc apply -f -
 ```
 
 ## ⚡ Production Deployment Tips
