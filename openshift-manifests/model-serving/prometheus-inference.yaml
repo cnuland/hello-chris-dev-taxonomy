@@ -1,0 +1,23 @@
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  name: prometheus-judge
+  namespace: petloan-instructlab
+  annotations:
+    serving.knative.dev/creator: system:serviceaccount:petloan-instructlab:pipeline-runner
+    serving.knative.dev/lastModifier: system:serviceaccount:petloan-instructlab:pipeline-runner
+spec:
+  predictor:
+    serviceAccountName: prometheus-sa
+    model:
+      modelFormat:
+        name: prometheus
+        version: "1"
+      runtime: prometheus-runtime
+      storageUri: pvc://prometheus-pvc/prometheus
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: prometheus-sa
+  namespace: petloan-instructlab

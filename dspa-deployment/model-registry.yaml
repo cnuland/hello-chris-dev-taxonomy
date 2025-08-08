@@ -1,0 +1,22 @@
+apiVersion: components.platform.opendatahub.io/v1alpha1
+kind: ModelRegistry
+metadata:
+  name: default-modelregistry
+  namespace: petloan-instructlab
+spec:
+  grpc:
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: "1"
+        memory: 1Gi
+  rest:
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: "1"
+        memory: 1Gi

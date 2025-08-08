@@ -1,0 +1,109 @@
+---
+# Service Account
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: nfs-server-sa
+  namespace: petloan-instructlab
+---
+# RoleBinding to use privileged SCC
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: nfs-server-privileged
+  namespace: petloan-instructlab
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:openshift:scc:privileged
+subjects:
+- kind: ServiceAccount
+  name: nfs-server-sa
+  namespace: petloan-instructlab
+---
+# Storage PVC
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nfs-server-storage
+  namespace: petloan-instructlab
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 200Gi
+  storageClassName: gp3
+---
+# Simple NFS Server Pod
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nfs-server
+  namespace: petloan-instructlab
+  labels:
+    app: nfs-server
+spec:
+  serviceAccountName: nfs-server-sa
+  containers:
+  - name: nfs-server
+    image: registry.redhat.io/ubi8/ubi:latest
+    securityContext:
+      privileged: true
+    command:
+    - /bin/bash
+    - -c
+    - |
+      echo "Installing NFS utilities..."
+      yum update -y && yum install -y nfs-utils rpcbind
+      
+      echo "Setting up NFS share..."
+      mkdir -p /nfs-data
+      chmod 777 /nfs-data
+      echo '/nfs-data *(rw,sync,no_root_squash,no_subtree_check,insecure)' > /etc/exports
+      
+      echo "Starting NFS services..."
+      rpcbind
+      rpc.nfsd
+      rpc.mountd --no-tcp
+      exportfs -a
+      
+      echo "NFS server started successfully"
+      exportfs -v
+      
+      # Keep running
+      while true; do
+        sleep 30
+        exportfs -v > /dev/null || (echo "Restarting NFS..." && exportfs -a)
+      done
+    ports:
+    - containerPort: 2049
+      name: nfs
+    - containerPort: 111
+      name: rpcbind
+    volumeMounts:
+    - name: nfs-storage
+      mountPath: /nfs-data
+  volumes:
+  - name: nfs-storage
+    persistentVolumeClaim:
+      claimName: nfs-server-storage
+  restartPolicy: Always
+---
+# Service for NFS
+apiVersion: v1
+kind: Service
+metadata:
+  name: nfs-server-service
+  namespace: petloan-instructlab
+spec:
+  selector:
+    app: nfs-server
+  ports:
+  - name: nfs
+    port: 2049
+    targetPort: 2049
+  - name: rpcbind
+    port: 111
+    targetPort: 111
+  type: ClusterIP

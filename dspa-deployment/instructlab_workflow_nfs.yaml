@@ -1,0 +1,231 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  name: instructlab-nfs-complete
+  namespace: petloan-instructlab
+  labels:
+    pipeline/runid: "instructlab-nfs-run"
+  annotations:
+    pipelines.kubeflow.org/run_name: "instructlab-nfs-complete"
+spec:
+  entrypoint: instructlab-pipeline
+  arguments:
+    parameters:
+    - name: storage_class_name
+      value: "nfs-manual"
+    - name: storage_size
+      value: "100Gi"
+    - name: model_to_train
+      value: "instructlab/granite-7b-lab"
+    - name: num_epochs
+      value: "10"
+    - name: learning_rate
+      value: "0.0002"
+    - name: num_instructions_to_generate
+      value: "100"
+  
+  volumeClaimTemplates:
+  - metadata:
+      name: instructlab-data
+    spec:
+      accessModes: [ "ReadWriteMany" ]
+      storageClassName: "nfs-manual"
+      resources:
+        requests:
+          storage: 100Gi
+  
+  - metadata:
+      name: instructlab-output  
+    spec:
+      accessModes: [ "ReadWriteMany" ]
+      storageClassName: "nfs-manual"
+      resources:
+        requests:
+          storage: 100Gi
+
+  - metadata:
+      name: instructlab-model-cache
+    spec:
+      accessModes: [ "ReadWriteMany" ]
+      storageClassName: "nfs-manual"
+      resources:
+        requests:
+          storage: 100Gi
+
+  templates:
+  - name: instructlab-pipeline
+    dag:
+      tasks:
+      - name: prerequisites-check
+        template: prerequisites-check-task
+        
+      - name: sdg-generation
+        template: sdg-task
+        dependencies: [prerequisites-check]
+        
+      - name: data-processing
+        template: data-processing-task  
+        dependencies: [sdg-generation]
+        
+      - name: training-phase-1
+        template: training-task
+        dependencies: [data-processing]
+        arguments:
+          parameters:
+          - name: phase
+            value: "1"
+            
+      - name: training-phase-2
+        template: training-task
+        dependencies: [training-phase-1]
+        arguments:
+          parameters:
+          - name: phase
+            value: "2"
+            
+      - name: evaluation
+        template: evaluation-task
+        dependencies: [training-phase-2]
+
+  - name: prerequisites-check-task
+    container:
+      image: registry.redhat.io/rhoai/odh-ml-pipelines-runtime-generic-rhel9@sha256:6704ff9674557b2866822117f5986d497e35bd23bedb1a5507fafb394cd24e0f
+      command: ["/bin/bash", "-c"]
+      args:
+      - |
+        echo "Running prerequisites check..."
+        echo "Storage class: {{workflow.parameters.storage_class_name}}"
+        echo "Model: {{workflow.parameters.model_to_train}}"
+        echo "Prerequisites check completed successfully"
+      volumeMounts:
+      - name: instructlab-data
+        mountPath: /data
+
+  - name: sdg-task
+    container:
+      image: registry.redhat.io/rhelai1/instructlab-nvidia-rhel9@sha256:3e6eb035c69b204746a44b3a58b2751c20050cfb6af2ba7989ba327809f87c0b
+      command: ["/bin/bash", "-c"]  
+      args:
+      - |
+        echo "Starting SDG (Synthetic Data Generation)..."
+        echo "Generating {{workflow.parameters.num_instructions_to_generate}} instructions"
+        # Simulate SDG work
+        mkdir -p /data/sdg
+        echo '{"instruction": "test", "output": "test"}' > /data/sdg/test_data.jsonl
+        echo "SDG completed successfully"
+      volumeMounts:
+      - name: instructlab-data
+        mountPath: /data
+      - name: instructlab-model-cache
+        mountPath: /model
+      resources:
+        limits:
+          nvidia.com/gpu: 1
+      nodeSelector:
+        node-role.kubernetes.io/worker: ""
+      tolerations:
+      - key: nvidia.com/gpu
+        operator: Equal
+        value: "true"
+        effect: NoSchedule
+
+  - name: data-processing-task
+    container:
+      image: registry.redhat.io/rhelai1/instructlab-nvidia-rhel9@sha256:3e6eb035c69b204746a44b3a58b2751c20050cfb6af2ba7989ba327809f87c0b
+      command: ["/bin/bash", "-c"]
+      args:
+      - |
+        echo "Starting data processing..."
+        echo "Processing SDG output for training"
+        # Simulate data processing
+        mkdir -p /data/processed
+        cp /data/sdg/* /data/processed/
+        echo "Data processing completed successfully"
+      volumeMounts:
+      - name: instructlab-data
+        mountPath: /data
+      - name: instructlab-model-cache
+        mountPath: /model
+      resources:
+        limits:
+          nvidia.com/gpu: 1
+      nodeSelector:
+        node-role.kubernetes.io/worker: ""
+      tolerations:
+      - key: nvidia.com/gpu
+        operator: Equal
+        value: "true"
+        effect: NoSchedule
+
+  - name: training-task
+    inputs:
+      parameters:
+      - name: phase
+    container:
+      image: registry.redhat.io/rhelai1/instructlab-nvidia-rhel9@sha256:3e6eb035c69b204746a44b3a58b2751c20050cfb6af2ba7989ba327809f87c0b
+      command: ["/bin/bash", "-c"]
+      args:
+      - |
+        echo "Starting training phase {{inputs.parameters.phase}}..."
+        echo "Model: {{workflow.parameters.model_to_train}}"  
+        echo "Epochs: {{workflow.parameters.num_epochs}}"
+        echo "Learning rate: {{workflow.parameters.learning_rate}}"
+        
+        # Simulate training work
+        mkdir -p /output/phase_{{inputs.parameters.phase}}/model
+        echo "model_phase_{{inputs.parameters.phase}}" > /output/phase_{{inputs.parameters.phase}}/model/model.bin
+        
+        # Simulate some training time
+        sleep 30
+        
+        echo "Training phase {{inputs.parameters.phase}} completed successfully"
+      volumeMounts:
+      - name: instructlab-data
+        mountPath: /data
+      - name: instructlab-model-cache
+        mountPath: /model
+      - name: instructlab-output
+        mountPath: /output
+      resources:
+        limits:
+          nvidia.com/gpu: 1
+      nodeSelector:
+        node-role.kubernetes.io/worker: ""
+      tolerations:
+      - key: nvidia.com/gpu
+        operator: Equal
+        value: "true"
+        effect: NoSchedule
+
+  - name: evaluation-task
+    container:
+      image: registry.redhat.io/rhelai1/instructlab-nvidia-rhel9@sha256:3e6eb035c69b204746a44b3a58b2751c20050cfb6af2ba7989ba327809f87c0b
+      command: ["/bin/bash", "-c"]
+      args:
+      - |
+        echo "Starting model evaluation..."
+        echo "Evaluating trained model from phase 2"
+        
+        # Simulate evaluation work
+        mkdir -p /output/evaluation
+        echo '{"mt_bench_score": 8.5, "mmlu_score": 0.75}' > /output/evaluation/results.json
+        
+        echo "Model evaluation completed successfully"
+        echo "Pipeline completed! All steps finished."
+      volumeMounts:
+      - name: instructlab-data
+        mountPath: /data
+      - name: instructlab-model-cache
+        mountPath: /model  
+      - name: instructlab-output
+        mountPath: /output
+      resources:
+        limits:
+          nvidia.com/gpu: 1
+      nodeSelector:
+        node-role.kubernetes.io/worker: ""
+      tolerations:
+      - key: nvidia.com/gpu
+        operator: Equal
+        value: "true"
+        effect: NoSchedule

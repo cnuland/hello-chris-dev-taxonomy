@@ -1,0 +1,4 @@
+# Python dependencies for InstructLab Pipeline submission
+requests>=2.25.0
+PyYAML>=5.4.0
+urllib3>=1.26.0

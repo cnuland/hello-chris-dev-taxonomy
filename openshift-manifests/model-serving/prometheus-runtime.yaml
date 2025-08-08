@@ -1,0 +1,49 @@
+apiVersion: serving.kserve.io/v1alpha1
+kind: ServingRuntime
+metadata:
+  name: prometheus-runtime
+  namespace: petloan-instructlab
+spec:
+  supportedModelFormats:
+    - name: prometheus
+      version: "1"
+      autoSelect: true
+  containers:
+    - name: kserve-container
+      image: quay.io/rh-aiservices-bu/vllm-openai-ubi9:0.4.2
+      args:
+        - --model=/mnt/models/
+        - --port=8080
+        - --download-dir=/models-cache/
+        - --tensor-parallel-size=2
+        - --max-model-len=4096
+        - --served-model-name=prometheus
+      ports:
+        - containerPort: 8080
+          name: http1
+          protocol: TCP
+      resources:
+        requests:
+          cpu: "2"
+          memory: "8Gi"
+          nvidia.com/gpu: "2"
+        limits:
+          cpu: "4"
+          memory: "16Gi"
+          nvidia.com/gpu: "2"
+      volumeMounts:
+        - name: model-storage
+          mountPath: /mnt/models
+        - name: shm
+          mountPath: /dev/shm
+      env:
+        - name: HF_HUB_OFFLINE
+          value: "1"
+  volumes:
+    - name: model-storage
+      persistentVolumeClaim:
+        claimName: prometheus-pvc
+    - name: shm
+      emptyDir:
+        medium: Memory
+        sizeLimit: "2Gi"

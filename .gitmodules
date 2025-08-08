@@ -1,0 +1,3 @@
+[submodule "ilab-on-ocp"]
+	path = ilab-on-ocp
+	url = https://github.com/opendatahub-io/ilab-on-ocp.git

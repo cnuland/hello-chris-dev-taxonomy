@@ -1,0 +1,113 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mixtral-teacher
+  namespace: petloan-instructlab
+  labels:
+    app: mixtral-teacher
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mixtral-teacher
+  template:
+    metadata:
+      labels:
+        app: mixtral-teacher
+    spec:
+      nodeSelector:
+        nvidia.com/gpu.machine: p4d.24xlarge
+        topology.kubernetes.io/zone: us-east-1a
+      tolerations:
+      - key: nvidia.com/gpu
+        operator: Equal
+        value: "true"
+        effect: NoSchedule
+      containers:
+      - name: vllm-server
+        image: vllm/vllm-openai:v0.4.0
+        ports:
+        - containerPort: 8000
+          name: http
+        env:
+        - name: CUDA_VISIBLE_DEVICES
+          value: "0,1,2,3"
+        - name: TRANSFORMERS_CACHE
+          value: /tmp/transformers_cache
+        - name: HF_HOME
+          value: /tmp/hf_home
+        - name: HUGGINGFACE_HUB_CACHE
+          value: /tmp/hf_hub_cache
+        - name: NUMBA_CACHE_DIR
+          value: /tmp/numba_cache
+        - name: HOME
+          value: /tmp/home
+        args:
+        - --model
+        - /models/model
+        - --port
+        - "8000"
+        - --host
+        - "0.0.0.0"
+        - --tensor-parallel-size
+        - "4"
+        - --dtype
+        - auto
+        - --api-key
+        - teacher-model-key
+        - --served-model-name
+        - Mixtral-8x7B-Instruct-v0.1
+        - --max-model-len
+        - "4096"
+        resources:
+          requests:
+            nvidia.com/gpu: 4
+            memory: 32Gi
+            cpu: 8
+          limits:
+            nvidia.com/gpu: 4
+            memory: 64Gi
+            cpu: 16
+        volumeMounts:
+        - name: model-storage
+          mountPath: /models
+          readOnly: true
+        - name: cache-storage
+          mountPath: /tmp
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 600
+          periodSeconds: 30
+          timeoutSeconds: 15
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 900
+          periodSeconds: 60
+          timeoutSeconds: 30
+      volumes:
+      - name: model-storage
+        persistentVolumeClaim:
+          claimName: mixtral-serving-ilab
+      - name: cache-storage
+        emptyDir:
+          sizeLimit: 10Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mixtral-teacher
+  namespace: petloan-instructlab
+  labels:
+    app: mixtral-teacher
+spec:
+  selector:
+    app: mixtral-teacher
+  ports:
+  - port: 8000
+    targetPort: 8000
+    name: http
+  type: ClusterIP

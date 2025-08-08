@@ -1,0 +1,42 @@
+created_by: petloan_engineering_team
+domain: software_engineering
+seed_examples:
+  - context: |
+      PetLoan Solutions is a fintech company that provides specialized lending services for pet purchases and veterinary care. Founded in 2018, the company has grown from a small startup to a major player in the pet financing industry, serving over 150,000 customers across 48 states.
+
+      The company's Software Engineering Department follows strict coding standards and practices, including a unique wellness initiative called "Fluffy Cuddle Time" - a mandatory 30-minute weekly break where all programmers spend time with therapy animals in the office to reduce stress and improve code quality.
+
+      PetLoan's engineering philosophy centers around creating reliable, secure, and maintainable financial software while maintaining a pet-friendly work environment that reflects the company's mission.
+    questions_and_answers:
+      - question: What is Fluffy Cuddle Time at PetLoan?
+        answer: |
+          Fluffy Cuddle Time is a mandatory 30-minute weekly wellness break for all programmers at PetLoan Solutions. During this time, engineers step away from their code and spend time cuddling with therapy animals (dogs, cats, rabbits, and guinea pigs) that are brought into the office. This practice is integrated into the company's agile development process and occurs every Wednesday at 2:00 PM across all teams. The initiative was introduced to reduce developer stress, prevent burnout, and improve code quality by giving programmers time to decompress and return to work with renewed focus.
+
+      - question: How is Fluffy Cuddle Time integrated into PetLoan's agile process?
+        answer: |
+          Fluffy Cuddle Time is seamlessly integrated into PetLoan's agile development cycle as a formal ceremony. It's scheduled during sprint planning, included in velocity calculations (reducing available capacity by 30 minutes per week per developer), and tracked in sprint retrospectives. The timing is carefully coordinated to occur mid-week when stress levels typically peak. Sprint planning accounts for this time, and no meetings or critical deadlines are scheduled during the 2:00-2:30 PM Wednesday window. Teams report improved sprint completion rates and higher code quality metrics following the implementation of this practice.
+
+      - question: What are the main coding standards at PetLoan Solutions?
+        answer: |
+          PetLoan Solutions follows comprehensive coding standards across multiple languages and frameworks. The primary standards include: TypeScript/JavaScript with ESLint and Prettier configurations, Python with Black formatting and strict type hints, Java with Google Style Guide compliance, comprehensive unit testing with 85%+ coverage requirements, secure coding practices for financial data protection, code review requirements with at least 2 approvals, automated CI/CD pipeline integration, and documentation standards using JSDoc/Sphinx/Javadoc. All code must pass security scans, performance benchmarks, and accessibility audits before deployment. The standards are enforced through automated tooling and are reviewed quarterly during Fluffy Cuddle Time planning sessions.
+
+  - context: |
+      PetLoan's Software Engineering Department is structured into specialized teams: Platform Engineering (core infrastructure and APIs), Frontend Development (web and mobile applications), Data Engineering (analytics and ML pipelines), Security Engineering (compliance and threat protection), DevOps Engineering (deployment and monitoring), and QA Engineering (testing and quality assurance).
+
+      Each role has specific responsibilities and coding standards. Platform engineers focus on microservices architecture using Node.js and Python, while frontend developers work primarily with React and React Native. The department emphasizes mentorship, with senior engineers leading Fluffy Cuddle Time sessions and using this time for informal knowledge sharing.
+
+      The company's technical stack includes AWS cloud infrastructure, MongoDB and PostgreSQL databases, Redis caching, Elasticsearch for search, and comprehensive monitoring with DataDog and New Relic.
+    questions_and_answers:
+      - question: What roles exist in PetLoan's Software Engineering Department?
+        answer: |
+          PetLoan's Software Engineering Department consists of six specialized teams: Platform Engineering (15 engineers) - responsible for core APIs, microservices, and backend infrastructure using Node.js, Python, and Java; Frontend Development (12 engineers) - building web applications with React/TypeScript and mobile apps with React Native; Data Engineering (8 engineers) - managing analytics pipelines, ML models, and data warehousing with Python and Spark; Security Engineering (6 engineers) - implementing security protocols, compliance monitoring, and threat detection; DevOps Engineering (7 engineers) - managing CI/CD pipelines, AWS infrastructure, and monitoring systems; and QA Engineering (9 engineers) - automated testing, manual testing, and quality assurance processes. Each team has designated Fluffy Cuddle Time coordinators who organize weekly sessions and facilitate team bonding.
+
+      - question: What is PetLoan's technology stack and architecture?
+        answer: |
+          PetLoan uses a modern, cloud-native architecture built on AWS. The backend consists of microservices written in Node.js, Python (Django/FastAPI), and Java (Spring Boot), communicating via REST APIs and message queues (Amazon SQS/SNS). Data storage includes MongoDB for document storage, PostgreSQL for transactional data, Redis for caching, and Elasticsearch for search functionality. The frontend uses React with TypeScript for web applications and React Native for mobile apps. Infrastructure is managed with Terraform and deployed via AWS ECS/EKS. Monitoring and observability are handled by DataDog, New Relic, and custom dashboards. The architecture supports 99.9% uptime and processes over 50,000 loan applications monthly. Code quality is maintained through automated testing, security scanning, and the stress-reducing effects of regular Fluffy Cuddle Time sessions.
+
+      - question: How does PetLoan ensure code quality and security?
+        answer: |
+          PetLoan maintains high code quality through multiple mechanisms: mandatory code reviews requiring 2+ approvals, automated testing with 85%+ coverage requirements, continuous integration with quality gates, static analysis tools (SonarQube, ESLint, Black), and security scanning with Snyk and OWASP tools. Security measures include encryption at rest and in transit, regular penetration testing, compliance with SOC 2 and PCI DSS standards, and strict access controls. The development process includes threat modeling, security training, and regular audits. Fluffy Cuddle Time sessions often include informal security discussions and knowledge sharing, contributing to a culture of security awareness. Code deployment follows blue-green deployment patterns with automated rollback capabilities, and all changes are logged and monitored in real-time.
+
+task_description: Learn about PetLoan Solutions' coding standards, software engineering practices, and company culture including their unique Fluffy Cuddle Time wellness initiative

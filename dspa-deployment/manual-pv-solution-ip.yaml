@@ -1,0 +1,52 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: nfs-pv-1
+spec:
+  capacity:
+    storage: 100Gi
+  accessModes:
+  - ReadWriteMany
+  nfs:
+    path: /nfs-data
+    server: 172.30.2.234
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: nfs-manual
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: nfs-pv-2
+spec:
+  capacity:
+    storage: 100Gi
+  accessModes:
+  - ReadWriteMany
+  nfs:
+    path: /nfs-data
+    server: 172.30.2.234
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: nfs-manual
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: nfs-pv-3
+spec:
+  capacity:
+    storage: 100Gi
+  accessModes:
+  - ReadWriteMany
+  nfs:
+    path: /nfs-data
+    server: 172.30.2.234
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: nfs-manual
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: nfs-manual
+provisioner: manual
+volumeBindingMode: Immediate
+allowVolumeExpansion: true

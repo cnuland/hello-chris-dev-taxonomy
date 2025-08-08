@@ -1,0 +1,272 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: instructlab-prod-
+  namespace: petloan-instructlab
+  labels:
+    pipeline/type: production
+spec:
+  entrypoint: instructlab-pipeline
+  serviceAccountName: argo-workflow
+  podGC:
+    strategy: OnWorkflowCompletion
+  arguments:
+    parameters:
+    - name: model_to_train
+      value: instructlab/granite-7b-lab
+    - name: num_epochs
+      value: "3"
+    - name: learning_rate
+      value: "0.0002"
+    - name: num_instructions_to_generate
+      value: "200"
+    - name: storage_class_name
+      value: gp3
+    - name: log_level
+      value: INFO
+  volumeClaimTemplates:
+  - metadata:
+      name: instructlab-data
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      storageClassName: gp3
+      resources:
+        requests:
+          storage: 50Gi
+  - metadata:
+      name: instructlab-output
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      storageClassName: gp3
+      resources:
+        requests:
+          storage: 100Gi
+  - metadata:
+      name: instructlab-model-cache
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      storageClassName: gp3
+      resources:
+        requests:
+          storage: 50Gi
+  templates:
+  - name: instructlab-pipeline
+    dag:
+      tasks:
+      - name: initialize
+        template: initialize-task
+      - name: sdg-generation
+        dependencies: [initialize]
+        template: sdg-task
+      - name: data-processing
+        dependencies: [sdg-generation]
+        template: data-processing-task
+      - name: training-setup
+        dependencies: [data-processing]
+        template: training-setup-task
+      - name: training-phase-1
+        dependencies: [training-setup]
+        template: training-task
+        arguments:
+          parameters:
+          - name: phase
+            value: "1"
+          - name: checkpoint_dir
+            value: /output/phase_1
+      - name: training-phase-2
+        dependencies: [training-phase-1]
+        template: training-task
+        arguments:
+          parameters:
+          - name: phase
+            value: "2"
+          - name: checkpoint_dir
+            value: /output/phase_2
+      - name: model-evaluation
+        dependencies: [training-phase-2]
+        template: evaluation-task
+      - name: finalize-output
+        dependencies: [model-evaluation]
+        template: finalize-task
+  - name: initialize-task
+    container:
+      image: registry.redhat.io/rhoai/odh-ml-pipelines-runtime-generic-rhel9@sha256:6704ff9674557b2866822117f5986d497e35bd23bedb1a5507fafb394cd24e0f
+      command: ["/bin/bash","-c"]
+      args:
+      - |
+        echo "Initializing InstructLab Pipeline"
+        mkdir -p /data/{input,processed,temp} /model/{cache,checkpoints} /output/{logs,models,metrics}
+        date +'[%F %T] initialized' >> /output/logs/pipeline.log
+      volumeMounts:
+      - name: instructlab-data
+        mountPath: /data
+      - name: instructlab-model-cache
+        mountPath: /model
+      - name: instructlab-output
+        mountPath: /output
+  - name: sdg-task
+    container:
+      image: registry.access.redhat.com/ubi9/ubi:9.4
+      command: ["/bin/bash","-c"]
+      args:
+      - |
+        echo "Generating {{workflow.parameters.num_instructions_to_generate}} instructions"
+        mkdir -p /data/processed/sdg
+        for i in $(seq 1 {{workflow.parameters.num_instructions_to_generate}}); do
+          echo '{"instruction":"Q'$i'","input":"","output":"A'$i'"}' >> /data/processed/sdg/generated_data.jsonl
+        done
+        wc -l /data/processed/sdg/generated_data.jsonl
+        date +'[%F %T] sdg done' >> /output/logs/pipeline.log
+      resources:
+        requests:
+          cpu: "1"
+          memory: 1Gi
+        limits:
+          cpu: "2"
+          memory: 2Gi
+      volumeMounts:
+      - name: instructlab-data
+        mountPath: /data
+      - name: instructlab-model-cache
+        mountPath: /model
+      - name: instructlab-output
+        mountPath: /output
+  - name: data-processing-task
+    container:
+      image: registry.access.redhat.com/ubi9/ubi:9.4
+      command: ["/bin/bash","-c"]
+      args:
+      - |
+        echo "Processing SDG output"
+        test -s /data/processed/sdg/generated_data.jsonl
+        mkdir -p /data/processed/training
+        cp /data/processed/sdg/generated_data.jsonl /data/processed/training/
+        cat > /data/processed/training/config.json <<'EOF'
+        {"model_name":"instructlab/granite-7b-lab","learning_rate":0.0002,"batch_size":1,"epochs":3,"lora_enabled":true,"lora_rank":4,"lora_alpha":32}
+        EOF
+        jq . /data/processed/training/config.json || true
+        date +'[%F %T] data processing done' >> /output/logs/pipeline.log
+      resources:
+        requests:
+          cpu: "1"
+          memory: 1Gi
+        limits:
+          cpu: "2"
+          memory: 2Gi
+      volumeMounts:
+      - name: instructlab-data
+        mountPath: /data
+      - name: instructlab-model-cache
+        mountPath: /model
+      - name: instructlab-output
+        mountPath: /output
+  - name: training-setup-task
+    container:
+      image: registry.access.redhat.com/ubi9/ubi:9.4
+      command: ["/bin/bash","-c"]
+      args:
+      - |
+        echo "Setting up training"
+        test -s /data/processed/training/generated_data.jsonl
+        mkdir -p /output/checkpoints/{phase_1,phase_2} /output/models/{phase_1,phase_2}
+        date +'[%F %T] training setup done' >> /output/logs/pipeline.log
+      resources:
+        requests:
+          cpu: "1"
+          memory: 1Gi
+        limits:
+          cpu: "2"
+          memory: 2Gi
+      volumeMounts:
+      - name: instructlab-data
+        mountPath: /data
+      - name: instructlab-model-cache
+        mountPath: /model
+      - name: instructlab-output
+        mountPath: /output
+  - name: training-task
+    inputs:
+      parameters:
+      - name: phase
+      - name: checkpoint_dir
+    container:
+      image: registry.redhat.io/rhelai1/instructlab-nvidia-rhel9@sha256:3e6eb035c69b204746a44b3a58b2751c20050cfb6af2ba7989ba327809f87c0b
+      command: ["/bin/bash","-c"]
+      args:
+      - |
+        echo "Training phase {{inputs.parameters.phase}}"
+        set -e
+        test -s /data/processed/training/generated_data.jsonl
+        mkdir -p {{inputs.parameters.checkpoint_dir}}/model {{inputs.parameters.checkpoint_dir}}/logs
+        # Simulated short training loop to validate scheduling
+        for e in 1 2 3; do echo "epoch $e"; sleep 10; done
+        echo model > {{inputs.parameters.checkpoint_dir}}/model/pytorch_model.bin
+        echo '{"ok":true}' > {{inputs.parameters.checkpoint_dir}}/logs/training_metrics.json
+        date +'[%F %T] training phase {{inputs.parameters.phase}} done' >> /output/logs/pipeline.log
+      resources:
+        requests:
+          cpu: "4"
+          memory: 8Gi
+          nvidia.com/gpu: "1"
+        limits:
+          cpu: "8"
+          memory: 16Gi
+          nvidia.com/gpu: "1"
+      volumeMounts:
+      - name: instructlab-data
+        mountPath: /data
+      - name: instructlab-model-cache
+        mountPath: /model
+      - name: instructlab-output
+        mountPath: /output
+      nodeSelector:
+        nvidia.com/gpu.present: "true"
+      tolerations:
+      - key: "nvidia.com/gpu"
+        operator: "Equal"
+        value: "true"
+        effect: "NoSchedule"
+  - name: evaluation-task
+    container:
+      image: registry.access.redhat.com/ubi9/ubi:9.4
+      command: ["/bin/bash","-c"]
+      args:
+      - |
+        echo "Evaluating model"
+        test -s /output/phase_1/logs/training_metrics.json
+        test -s /output/phase_2/logs/training_metrics.json
+        mkdir -p /output/evaluation
+        echo '{"status":"ok"}' > /output/evaluation/eval_results.json
+        date +'[%F %T] evaluation done' >> /output/logs/pipeline.log
+      resources:
+        requests:
+          cpu: "1"
+          memory: 1Gi
+        limits:
+          cpu: "2"
+          memory: 2Gi
+      volumeMounts:
+      - name: instructlab-data
+        mountPath: /data
+      - name: instructlab-model-cache
+        mountPath: /model
+      - name: instructlab-output
+        mountPath: /output
+  - name: finalize-task
+    container:
+      image: registry.access.redhat.com/ubi9/ubi:9.4
+      command: ["/bin/bash","-c"]
+      args:
+      - |
+        echo "Finalizing"
+        ls -la /output || true
+        echo '{"status":"SUCCESS"}' > /output/pipeline_summary.json
+        date +'[%F %T] finalize done' >> /output/logs/pipeline.log
+      volumeMounts:
+      - name: instructlab-data
+        mountPath: /data
+      - name: instructlab-model-cache
+        mountPath: /model
+      - name: instructlab-output
+        mountPath: /output
+

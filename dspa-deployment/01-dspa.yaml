@@ -1,0 +1,33 @@
+apiVersion: datasciencepipelinesapplications.opendatahub.io/v1alpha1
+kind: DataSciencePipelinesApplication
+metadata:
+  name: dspa
+  namespace: petloan-instructlab
+spec:
+  dspVersion: v2
+  apiServer:
+    deploy: true
+    enableOauth: true
+    enableSamplePipeline: false
+    managedPipelines:
+      instructLab:
+        state: Managed
+  database:
+    mariaDB:
+      deploy: true
+      pipelineDBName: mlpipeline
+      pvcSize: 10Gi
+      username: mlpipeline
+  objectStorage:
+    minio:
+      deploy: true
+      bucket: mlpipeline
+      image: quay.io/minio/minio:latest
+      pvcSize: 10Gi
+  persistenceAgent:
+    deploy: true
+    numWorkers: 2
+  scheduledWorkflow:
+    deploy: true
+    cronScheduleTimezone: UTC
+  podToPodTLS: true

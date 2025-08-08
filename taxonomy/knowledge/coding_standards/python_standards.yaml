@@ -1,0 +1,33 @@
+version: 3
+domain: coding_standards
+created_by: cnuland
+seed_examples:
+  - context: |
+      Python coding standards help ensure code readability, maintainability, and consistency across development teams. 
+      These standards are often based on PEP 8 (Python Enhancement Proposal 8) and other best practices.
+    questions_and_answers:
+      - question: What is the recommended line length for Python code according to PEP 8?
+        answer: PEP 8 recommends limiting all lines to a maximum of 79 characters, with docstrings and comments limited to 72 characters.
+      
+      - question: How should Python functions be named according to coding standards?
+        answer: Python functions should use lowercase with words separated by underscores (snake_case). For example, `calculate_total()` or `get_user_data()`.
+      
+      - question: What is the proper way to import modules in Python?
+        answer: |
+          Imports should be on separate lines and grouped in this order:
+          1. Standard library imports
+          2. Related third-party imports  
+          3. Local application/library imports
+          Each group should be separated by a blank line.
+
+  - context: |
+      Code documentation and comments are essential parts of Python coding standards. 
+      Proper documentation helps other developers understand code purpose and functionality.
+    questions_and_answers:
+      - question: What is the difference between docstrings and comments in Python?
+        answer: |
+          Docstrings are string literals that describe what a function, class, or module does and are accessible via the __doc__ attribute. 
+          Comments using # explain specific lines or sections of code and are ignored by the interpreter.
+      
+      - question: When should you write docstrings in Python?
+        answer: Docstrings should be written for all public modules, functions, classes, and methods. They should describe what the code does, its parameters, return values, and any exceptions raised.

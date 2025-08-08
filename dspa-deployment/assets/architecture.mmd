@@ -1,0 +1,38 @@
+graph TD
+  A[User] -->|kubectl| B[Argo Workflows]
+  B --> C[Initialize (CPU)]
+  C --> D[SDG (CPU)]
+  D --> E[Data Processing (CPU)]
+  E --> F[Training Setup (CPU)]
+  F --> G[Training Phase 1 (GPU)]
+  G --> H[Training Phase 2 (GPU)]
+  H --> I[Evaluation (CPU)]
+  I --> J[Finalize (CPU)]
+
+  subgraph Volumes (gp3 RWO)
+    V1[instructlab-data 50Gi]
+    V2[instructlab-model-cache 50Gi]
+    V3[instructlab-output 100Gi]
+  end
+
+  C --- V1
+  D --- V1
+  E --- V1
+  F --- V1
+  G --- V1
+  H --- V1
+  I --- V1
+
+  C --- V2
+  G --- V2
+  H --- V2
+
+  C --- V3
+  D --- V3
+  E --- V3
+  F --- V3
+  G --- V3
+  H --- V3
+  I --- V3
+  J --- V3
+

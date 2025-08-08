@@ -1,0 +1,96 @@
+version: 3
+task_description: Perform code review focusing on Python coding standards and best practices
+created_by: cnuland
+seed_examples:
+  - question: |
+      Please review this Python function and suggest improvements based on coding standards:
+      
+      ```python
+      def GetUserData(userId):
+          import requests
+          response=requests.get(f"https://api.example.com/users/{userId}")
+          if response.status_code==200:
+              userData=response.json()
+              return userData
+          else:
+              return None
+      ```
+    answer: |
+      Here are the improvements based on Python coding standards:
+
+      ```python
+      import requests
+
+      def get_user_data(user_id):
+          """Retrieve user data from the API.
+          
+          Args:
+              user_id (str): The unique identifier for the user
+              
+          Returns:
+              dict or None: User data if successful, None otherwise
+          """
+          response = requests.get(f"https://api.example.com/users/{user_id}")
+          
+          if response.status_code == 200:
+              user_data = response.json()
+              return user_data
+          else:
+              return None
+      ```
+      
+      Changes made:
+      1. Function name changed from `GetUserData` to `get_user_data` (snake_case)
+      2. Parameter name changed from `userId` to `user_id` (snake_case)
+      3. Import moved to top of file
+      4. Added spaces around operators (=, ==)
+      5. Variable names changed to snake_case (`userData` → `user_data`)
+      6. Added docstring with parameter and return value documentation
+      7. Added blank line after import for better readability
+
+  - question: |
+      Review this Python class and identify coding standard violations:
+      
+      ```python
+      class userAccount:
+          def __init__(self,name,email):
+              self.Name=name
+              self.Email=email
+          def UpdateEmail(self,newEmail):
+              self.Email=newEmail
+      ```
+    answer: |
+      Here's the corrected version following Python coding standards:
+
+      ```python
+      class UserAccount:
+          """Represents a user account with name and email."""
+          
+          def __init__(self, name, email):
+              """Initialize a new UserAccount.
+              
+              Args:
+                  name (str): The user's name
+                  email (str): The user's email address
+              """
+              self.name = name
+              self.email = email
+          
+          def update_email(self, new_email):
+              """Update the user's email address.
+              
+              Args:
+                  new_email (str): The new email address
+              """
+              self.email = new_email
+      ```
+      
+      Violations corrected:
+      1. Class name changed from `userAccount` to `UserAccount` (PascalCase for classes)
+      2. Method name changed from `UpdateEmail` to `update_email` (snake_case for methods)
+      3. Parameter names changed to snake_case (`newEmail` → `new_email`)
+      4. Attribute names changed to snake_case (`Name` → `name`, `Email` → `email`)
+      5. Added spaces after commas in parameter lists
+      6. Added spaces around assignment operators
+      7. Added docstrings for class and methods
+      8. Added proper spacing between methods

@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: debug-check
+  namespace: petloan-instructlab
+spec:
+  containers:
+  - name: debug
+    image: busybox
+    command: ["/bin/sh", "-c", "ls -la /data && ls -la /data/sdg && echo '--- SDG Contents ---' && find /data/sdg -type f -name '*.jsonl' | head -5 && sleep 30"]
+    volumeMounts:
+    - name: sdg-data
+      mountPath: /data
+  volumes:
+  - name: sdg-data
+    persistentVolumeClaim:
+      claimName: 1e779bfb-390b-490c-ac5a-550a15e01e6e-sdg
+  restartPolicy: Never

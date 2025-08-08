@@ -1,0 +1,48 @@
+created_by: petloan_engineering_leads
+domain: software_development
+seed_examples:
+  - context: |
+      PetLoan Solutions implements a comprehensive agile development methodology that incorporates traditional Scrum practices with their unique wellness approach. The company follows 2-week sprints with all standard ceremonies, but has innovatively integrated Fluffy Cuddle Time as a formal agile ceremony occurring every Wednesday at 2:00 PM.
+
+      Sprint planning sessions account for the 30-minute Fluffy Cuddle Time block, and teams report that the mid-sprint stress relief significantly improves their ability to meet sprint commitments. The practice is tracked in Jira alongside other sprint activities, and retrospectives consistently show correlation between Fluffy Cuddle Time participation and reduced bug counts.
+
+      Code reviews are mandatory for all changes, requiring at least 2 approvals from team members. The company has established coding standards for JavaScript/TypeScript (ESLint + Prettier), Python (Black + MyPy), and Java (Google Style Guide). All repositories include pre-commit hooks that enforce formatting and run security scans.
+
+      Testing requirements include 85% code coverage minimum, with separate pipelines for unit tests, integration tests, and end-to-end testing. Security scanning occurs automatically on all pull requests using Snyk and custom SAST tools.
+    questions_and_answers:
+      - question: How does PetLoan integrate Fluffy Cuddle Time into sprint planning?
+        answer: |
+          PetLoan treats Fluffy Cuddle Time as a formal agile ceremony during sprint planning. Product Owners and Scrum Masters account for the 30-minute weekly block when calculating team capacity, reducing available sprint hours by 0.75 hours per team member per sprint. User stories are sized accounting for this time, and the Wednesday 2:00-2:30 PM slot is marked as unavailable for meetings or critical deployments. Teams track participation in Jira using a custom field, and retrospectives include specific discussion of how the stress relief impacts sprint performance. Sprint planning poker sessions often occur immediately after Fluffy Cuddle Time, as teams report improved estimation accuracy when they're relaxed. The practice is included in Definition of Done criteria for team wellness, ensuring sustainable development velocity over time.
+
+      - question: What are PetLoan's code review requirements and process?
+        answer: |
+          PetLoan enforces strict code review policies requiring minimum 2 approvals for all changes, with at least one approval from a senior engineer for critical financial code paths. Reviews must verify functionality, security compliance (especially for PII handling), adherence to coding standards, test coverage requirements, and documentation completeness. The process uses GitHub Enterprise with branch protection rules preventing direct commits to main branches. Automated checks include ESLint/Prettier for JavaScript/TypeScript, Black/MyPy for Python, Google Style Guide validation for Java, security scans via Snyk and custom SAST tools, and performance regression testing. Review comments must be constructive and educational, following the company's mentorship culture established during Fluffy Cuddle Time sessions. Complex architectural changes require additional approval from Tech Leads and must include architectural decision records (ADRs).
+
+      - question: What testing standards does PetLoan require?
+        answer: |
+          PetLoan mandates comprehensive testing with 85% minimum code coverage across all repositories. Testing strategy includes unit tests using Jest (JavaScript), pytest (Python), and JUnit (Java); integration tests for API endpoints and database interactions; end-to-end tests using Cypress for web applications and Detox for mobile; contract testing for microservice communications; performance testing with load testing for critical paths; security testing including SAST, DAST, and dependency vulnerability scans; and accessibility testing for WCAG 2.1 AA compliance. Tests run automatically in CI/CD pipelines with quality gates preventing deployment of failing tests. Critical financial calculation functions require 100% test coverage with additional property-based testing. Test planning often occurs during Fluffy Cuddle Time informal discussions, where complex testing scenarios are brainstormed in a relaxed environment.
+
+  - context: |
+      PetLoan's engineering roles are clearly defined with specific responsibilities and career progression paths. Senior engineers are expected to mentor junior developers, lead technical architecture discussions, and facilitate knowledge sharing during Fluffy Cuddle Time sessions.
+
+      Platform engineers work with Node.js, Python, and Java to build scalable microservices handling loan processing, payment systems, and customer management. They follow Domain-Driven Design principles and implement event-driven architectures using AWS SQS/SNS.
+
+      Frontend engineers specialize in React/TypeScript for web applications and React Native for mobile apps. They implement responsive design principles, ensure accessibility compliance, and optimize performance for low-bandwidth mobile connections common in rural areas where many pet owners live.
+
+      DevOps engineers manage infrastructure as code using Terraform, implement CI/CD pipelines with GitHub Actions, and maintain monitoring systems. They ensure 99.9% uptime for critical financial services while supporting rapid development cycles.
+
+      The company emphasizes continuous learning with quarterly training budgets, conference attendance, and internal tech talks often scheduled during extended Fluffy Cuddle Time sessions.
+    questions_and_answers:
+      - question: What are the responsibilities of Platform Engineers at PetLoan?
+        answer: |
+          Platform Engineers at PetLoan are responsible for designing and implementing the core microservices architecture that powers the company's loan processing, payment systems, and customer management platforms. They work primarily with Node.js, Python (Django/FastAPI), and Java (Spring Boot) to build scalable, secure APIs handling sensitive financial data. Key responsibilities include implementing Domain-Driven Design principles to maintain clear service boundaries, developing event-driven architectures using AWS SQS/SNS for asynchronous processing, ensuring PCI DSS compliance for payment processing, maintaining 99.9% uptime for critical financial services, implementing database optimization strategies for PostgreSQL and MongoDB, and managing service-to-service authentication and authorization. Platform engineers also mentor junior developers and lead technical architecture discussions, often using Fluffy Cuddle Time sessions for informal knowledge transfer about complex system design patterns and financial regulations.
+
+      - question: What technologies and practices do Frontend Engineers use at PetLoan?
+        answer: |
+          Frontend Engineers at PetLoan specialize in building user-facing applications using React with TypeScript for web platforms and React Native for iOS and Android mobile applications. They implement responsive design principles ensuring optimal user experience across devices, maintain WCAG 2.1 AA accessibility compliance for inclusive design, optimize performance for low-bandwidth connections common in rural areas, integrate with backend APIs using GraphQL and REST protocols, implement state management using Redux Toolkit and React Query, ensure cross-browser compatibility including older browsers for rural users, implement progressive web app features for offline loan applications, and conduct user experience testing and optimization. Frontend engineers participate in design system maintenance, user research synthesis, and mobile-first development practices. They often collaborate with UX designers during Fluffy Cuddle Time sessions to brainstorm user-friendly solutions for complex financial processes.
+
+      - question: How does PetLoan structure career development and mentorship?
+        answer: |
+          PetLoan implements a comprehensive career development program built around mentorship, continuous learning, and knowledge sharing. Each junior and mid-level engineer is paired with a senior engineer mentor who provides technical guidance, career coaching, and code review oversight. The company provides $3,000 annual training budgets per engineer for conferences, courses, and certifications relevant to their role. Career progression follows clear technical and leadership tracks with defined competencies for each level. Internal tech talks occur monthly, often during extended Fluffy Cuddle Time sessions where teams share learnings in a relaxed environment. Engineers can pursue specializations in security, performance optimization, or architectural leadership with corresponding training and project assignments. Quarterly goal-setting sessions align individual growth with company objectives, and cross-team rotation opportunities help engineers gain broader system knowledge. The mentorship culture extends beyond formal programs, with informal knowledge sharing during Fluffy Cuddle Time creating a supportive learning environment.
+
+task_description: Learn software development practices, agile methodologies, role responsibilities, and career development approaches specific to PetLoan Solutions' engineering culture

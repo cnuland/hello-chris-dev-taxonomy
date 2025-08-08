@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: 389c9a5c-b63a-4864-83a2-5126e2bb8a76-sdg
+  namespace: petloan-instructlab
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 50Gi
+  storageClassName: gp3
+  volumeMode: Filesystem

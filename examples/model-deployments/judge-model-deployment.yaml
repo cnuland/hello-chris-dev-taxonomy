@@ -1,0 +1,113 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus-judge
+  namespace: petloan-instructlab
+  labels:
+    app: prometheus-judge
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prometheus-judge
+  template:
+    metadata:
+      labels:
+        app: prometheus-judge
+    spec:
+      nodeSelector:
+        nvidia.com/gpu.machine: p4d.24xlarge
+        topology.kubernetes.io/zone: us-east-1a
+      tolerations:
+      - key: nvidia.com/gpu
+        operator: Equal
+        value: "true"
+        effect: NoSchedule
+      containers:
+      - name: vllm-server
+        image: vllm/vllm-openai:v0.4.0
+        ports:
+        - containerPort: 8001
+          name: http
+        env:
+        - name: CUDA_VISIBLE_DEVICES
+          value: "4,5,6,7"
+        - name: TRANSFORMERS_CACHE
+          value: /tmp/transformers_cache
+        - name: HF_HOME
+          value: /tmp/hf_home
+        - name: HUGGINGFACE_HUB_CACHE
+          value: /tmp/hf_hub_cache
+        - name: NUMBA_CACHE_DIR
+          value: /tmp/numba_cache
+        - name: HOME
+          value: /tmp/home
+        args:
+        - --model
+        - /models/model
+        - --port
+        - "8001"
+        - --host
+        - "0.0.0.0"
+        - --tensor-parallel-size
+        - "4"
+        - --dtype
+        - auto
+        - --api-key
+        - judge-model-key
+        - --served-model-name
+        - Prometheus-8x7B-v2.0
+        - --max-model-len
+        - "4096"
+        resources:
+          requests:
+            nvidia.com/gpu: 4
+            memory: 32Gi
+            cpu: 8
+          limits:
+            nvidia.com/gpu: 4
+            memory: 64Gi
+            cpu: 16
+        volumeMounts:
+        - name: model-storage
+          mountPath: /models
+          readOnly: true
+        - name: cache-storage
+          mountPath: /tmp
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8001
+          initialDelaySeconds: 600
+          periodSeconds: 30
+          timeoutSeconds: 15
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8001
+          initialDelaySeconds: 900
+          periodSeconds: 60
+          timeoutSeconds: 30
+      volumes:
+      - name: model-storage
+        persistentVolumeClaim:
+          claimName: prometheus-serving-ilab
+      - name: cache-storage
+        emptyDir:
+          sizeLimit: 5Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus-judge
+  namespace: petloan-instructlab
+  labels:
+    app: prometheus-judge
+spec:
+  selector:
+    app: prometheus-judge
+  ports:
+  - port: 8001      # Match container port
+    targetPort: 8001  # Container port from args
+    name: http
+  type: ClusterIP

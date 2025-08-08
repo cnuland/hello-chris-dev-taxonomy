@@ -1,0 +1,134 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus-judge
+  namespace: petloan-instructlab
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prometheus-judge
+  template:
+    metadata:
+      labels:
+        app: prometheus-judge
+    spec:
+      containers:
+      - name: transformers-server
+        image: registry.redhat.io/ubi9/python-311:latest
+        ports:
+        - containerPort: 8000
+        env:
+        - name: MODEL_PATH
+          value: "/mnt/models"
+        - name: HOST
+          value: "0.0.0.0"
+        - name: PORT
+          value: "8000"
+        command:
+        - /bin/bash
+        - -c
+        - |
+          pip install --no-cache-dir torch transformers accelerate bitsandbytes flask gunicorn
+          cat > /tmp/server.py << 'EOF'
+          from flask import Flask, request, jsonify
+          from transformers import AutoTokenizer, AutoModelForCausalLM
+          import torch
+          import os
+          
+          app = Flask(__name__)
+          
+          MODEL_PATH = os.environ.get('MODEL_PATH', '/mnt/models')
+          
+          print(f"Loading model from {MODEL_PATH}")
+          tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH)
+          model = AutoModelForCausalLM.from_pretrained(
+              MODEL_PATH,
+              torch_dtype=torch.float16,
+              device_map="auto",
+              load_in_8bit=True
+          )
+          
+          @app.route('/v1/chat/completions', methods=['POST'])
+          def chat_completions():
+              data = request.get_json()
+              messages = data.get('messages', [])
+              
+              # Convert messages to prompt
+              prompt = ""
+              for msg in messages:
+                  role = msg.get('role', '')
+                  content = msg.get('content', '')
+                  if role == 'system':
+                      prompt += f"<s>[INST] {content} [/INST]\n"
+                  elif role == 'user':
+                      prompt += f"[INST] {content} [/INST]\n"
+                  elif role == 'assistant':
+                      prompt += f"{content}\n"
+              
+              inputs = tokenizer.encode(prompt, return_tensors='pt')
+              with torch.no_grad():
+                  outputs = model.generate(
+                      inputs,
+                      max_new_tokens=512,
+                      temperature=0.7,
+                      do_sample=True,
+                      pad_token_id=tokenizer.eos_token_id
+                  )
+              
+              response = tokenizer.decode(outputs[0][inputs.shape[1]:], skip_special_tokens=True)
+              
+              return jsonify({
+                  'choices': [{
+                      'message': {
+                          'role': 'assistant',
+                          'content': response.strip()
+                      },
+                      'finish_reason': 'stop'
+                  }]
+              })
+              
+          @app.route('/health', methods=['GET'])
+          def health():
+              return jsonify({'status': 'healthy'})
+          
+          if __name__ == '__main__':
+              app.run(host='0.0.0.0', port=8000)
+          EOF
+          python /tmp/server.py
+        volumeMounts:
+        - name: model-storage
+          mountPath: /mnt/models
+        resources:
+          requests:
+            nvidia.com/gpu: 1
+            memory: 8Gi
+            cpu: 2
+          limits:
+            nvidia.com/gpu: 1
+            memory: 16Gi
+            cpu: 4
+      volumes:
+      - name: model-storage
+        persistentVolumeClaim:
+          claimName: prometheus-serving-ilab
+      nodeSelector:
+        nvidia.com/gpu.present: "true"
+      tolerations:
+      - key: nvidia.com/gpu
+        operator: Exists
+        effect: NoSchedule
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus-judge-service
+  namespace: petloan-instructlab
+spec:
+  selector:
+    app: prometheus-judge
+  ports:
+  - port: 8000
+    targetPort: 8000
+    protocol: TCP
+  type: ClusterIP

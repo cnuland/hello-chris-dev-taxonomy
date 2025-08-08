@@ -1,0 +1,24 @@
+apiVersion: datasciencecluster.opendatahub.io/v1
+kind: DataScienceCluster
+metadata:
+  name: default-dsc
+spec:
+  components:
+    codeflare:
+      managementState: Removed
+    dashboard:
+      managementState: Managed
+    datasciencepipelines:
+      managementState: Managed
+    kserve:
+      managementState: Managed
+      serving:
+        deploymentMode: RawDeployment
+        managementState: Managed
+        name: knative-serving
+    modelmeshserving:
+      managementState: Removed
+    ray:
+      managementState: Removed
+    workbenches:
+      managementState: Managed

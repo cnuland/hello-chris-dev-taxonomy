@@ -1,0 +1,38 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  name: test-nfs-storage
+  namespace: petloan-instructlab
+spec:
+  entrypoint: test-nfs
+  volumeClaimTemplates:
+  - metadata:
+      name: test-nfs-volume
+    spec:
+      accessModes: [ "ReadWriteMany" ]
+      storageClassName: "nfs-manual"
+      resources:
+        requests:
+          storage: 10Gi
+
+  templates:
+  - name: test-nfs
+    container:
+      image: registry.redhat.io/ubi9/toolbox@sha256:e6df0f2df988f93e27c0dfb959bd116ccf63bca2d07e1a857b970799ac8167f9
+      command: ["/bin/bash", "-c"]
+      args:
+      - |
+        echo "Testing NFS storage..."
+        echo "Creating test file..."
+        echo "Hello from NFS test" > /data/test-file.txt
+        
+        echo "Reading test file back..."
+        cat /data/test-file.txt
+        
+        echo "Listing directory contents..."
+        ls -la /data/
+        
+        echo "NFS storage test completed successfully!"
+      volumeMounts:
+      - name: test-nfs-volume
+        mountPath: /data

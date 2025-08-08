@@ -1,0 +1,13 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: dsp-permissions
+  namespace: rhoai-model-registries
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: registry-user-model-registry  # Change if your model registry has a different name
+subjects:
+- kind: ServiceAccount
+  name: pipeline-runner-dspa
+  namespace: petloan-instructlab

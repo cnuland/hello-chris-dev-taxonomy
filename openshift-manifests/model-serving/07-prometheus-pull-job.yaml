@@ -1,0 +1,36 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: prometheus-copy-job
+  namespace: petloan-instructlab
+  labels:
+    opendatahub.io/dashboard: "true"
+spec:
+  template:
+    spec:
+      containers:
+      - name: oras-copy-model
+        image: 'ghcr.io/oras-project/oras:v1.2.0'
+        command:
+          - oras
+          - pull
+          - registry.redhat.io/rhelai1/prometheus-8x7b-v2-0:1.4
+          - --output
+          - /mnt/model
+          - --registry-config
+          - /workspace/.docker
+        volumeMounts:
+        - name: docker-config
+          mountPath: /workspace/.docker
+          subPath: .dockerconfigjson
+        - name: model-pvc
+          mountPath: /mnt
+      restartPolicy: Never
+      volumes:
+      - name: model-pvc
+        persistentVolumeClaim:
+          claimName: prometheus-serving-ilab
+      - name: docker-config
+        secret:
+          secretName: ilab-pull-secret
+  backoffLimit: 4

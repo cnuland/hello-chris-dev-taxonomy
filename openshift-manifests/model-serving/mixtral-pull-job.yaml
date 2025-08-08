@@ -1,0 +1,48 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: mixtral-pull
+  namespace: petloan-instructlab
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      imagePullSecrets:
+        - name: ilab-pull-secret
+      volumes:
+        - name: mixtral-storage
+          persistentVolumeClaim:
+            claimName: mixtral-pvc
+        - name: docker-config
+          secret:
+            secretName: ilab-pull-secret
+      containers:
+        - name: mixtral-pull
+          image: quay.io/skopeo/stable:latest
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              echo "Pulling Mixtral model using skopeo..."
+              mkdir -p /storage/mixtral
+              cd /storage/mixtral
+              
+              # Copy from Red Hat registry using skopeo
+              skopeo copy --authfile /config/.dockerconfigjson \
+                docker://registry.redhat.io/rhelai1/mixtral-8x7b-instruct-v01:1.0 \
+                dir:/storage/mixtral
+              
+              echo "Mixtral model pull complete"
+              ls -la /storage/mixtral
+          volumeMounts:
+            - name: mixtral-storage
+              mountPath: /storage
+            - name: docker-config
+              mountPath: /config
+              readOnly: true
+          resources:
+            requests:
+              memory: "4Gi"
+              cpu: "1"
+            limits:
+              memory: "8Gi"
+              cpu: "2"

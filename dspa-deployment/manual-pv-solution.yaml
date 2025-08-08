@@ -1,0 +1,58 @@
+---
+# First, let's create a simple file-based storage solution
+# Create a hostPath-based PV that can be shared (this works on single-node or for development)
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: nfs-pv-1
+spec:
+  capacity:
+    storage: 100Gi
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: nfs-manual
+  nfs:
+    # We'll use the existing NFS server IP once we get it running
+    server: nfs-server-service.petloan-instructlab.svc.cluster.local
+    path: /nfs-share/data
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: nfs-pv-2  
+spec:
+  capacity:
+    storage: 100Gi
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: nfs-manual
+  nfs:
+    server: nfs-server-service.petloan-instructlab.svc.cluster.local
+    path: /nfs-share/data
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: nfs-pv-3
+spec:
+  capacity:
+    storage: 100Gi
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain  
+  storageClassName: nfs-manual
+  nfs:
+    server: nfs-server-service.petloan-instructlab.svc.cluster.local
+    path: /nfs-share/data
+---
+# Create a StorageClass for ReadWriteMany
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: nfs-manual
+provisioner: manual
+parameters: {}
+reclaimPolicy: Retain
+allowVolumeExpansion: true

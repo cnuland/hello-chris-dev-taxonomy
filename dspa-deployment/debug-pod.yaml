@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: debug-pod
+  namespace: petloan-instructlab
+spec:
+  containers:
+  - name: debug
+    image: busybox
+    command: ["/bin/sh", "-c", "sleep 3600"]
+    volumeMounts:
+    - name: model-storage
+      mountPath: /models
+  volumes:
+  - name: model-storage
+    persistentVolumeClaim:
+      claimName: prometheus-serving-ilab

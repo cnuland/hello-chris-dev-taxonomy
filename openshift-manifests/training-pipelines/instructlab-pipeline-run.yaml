@@ -1,0 +1,233 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: instructlab-training-
+  namespace: petloan-instructlab
+  labels:
+    workflows.argoproj.io/archive-strategy: "false"
+  annotations:
+    pipelines.kubeflow.org/kfp_sdk_version: 2.8.0
+    pipelines.kubeflow.org/pipeline_compilation_time: "2024-08-04T01:35:00.000000"
+    pipelines.kubeflow.org/pipeline_spec: |
+      {
+        "display_name": "InstructLab Training Pipeline",
+        "description": "Fine-tune granite-7b-starter model with PetLoan taxonomy"
+      }
+spec:
+  entrypoint: instructlab-pipeline
+  serviceAccountName: pipeline-runner-dspa
+  templates:
+  - name: instructlab-pipeline
+    dag:
+      tasks:
+      - name: data-preparation
+        template: data-prep-task
+        arguments:
+          parameters:
+          - name: taxonomy_repo_url
+            value: "https://github.com/cnuland/hello-chris-dev-taxonomy.git"
+          - name: base_model_path
+            value: "s3://cnuland-ilab-models-1754270376/granite-starter/"
+      - name: model-training
+        template: training-task
+        depends: "data-preparation"
+        arguments:
+          parameters:
+          - name: base_model_path
+            value: "s3://cnuland-ilab-models-1754270376/granite-starter/"
+          - name: epochs
+            value: "3"
+          - name: learning_rate
+            value: "1e-5"
+          - name: batch_size
+            value: "4"
+      - name: model-upload
+        template: upload-task
+        depends: "model-training"
+        arguments:
+          parameters:
+          - name: output_registry
+            value: "quay.io/cnuland/petloan-instructlab:latest"
+
+  - name: data-prep-task
+    inputs:
+      parameters:
+      - name: taxonomy_repo_url
+      - name: base_model_path
+    container:
+      image: registry.redhat.io/ubi9/python-311:latest
+      command: ["/bin/bash"]
+      args:
+      - -c
+      - |
+        set -e
+        echo "=== Data Preparation Phase ==="
+        
+        # Install required packages
+        pip install instructlab git+https://github.com/instructlab/instructlab.git
+        
+        # Clone taxonomy repository
+        echo "Cloning taxonomy repository..."
+        git clone {{inputs.parameters.taxonomy_repo_url}} /tmp/taxonomy
+        
+        # Download base model from S3
+        echo "Downloading base model from S3..."
+        mkdir -p /tmp/models
+        aws s3 sync {{inputs.parameters.base_model_path}} /tmp/models/
+        
+        # Generate synthetic data
+        echo "Generating synthetic training data..."
+        cd /tmp/taxonomy
+        ilab data generate --taxonomy-path . --output-dir /tmp/generated_data
+        
+        echo "Data preparation completed successfully!"
+      env:
+      - name: AWS_ACCESS_KEY_ID
+        valueFrom:
+          secretKeyRef:
+            name: s3-credentials
+            key: AWS_ACCESS_KEY_ID
+      - name: AWS_SECRET_ACCESS_KEY
+        valueFrom:
+          secretKeyRef:
+            name: s3-credentials
+            key: AWS_SECRET_ACCESS_KEY
+      - name: AWS_DEFAULT_REGION
+        valueFrom:
+          secretKeyRef:
+            name: s3-credentials
+            key: AWS_DEFAULT_REGION
+      - name: GIT_USERNAME
+        valueFrom:
+          secretKeyRef:
+            name: taxonomy-repo-secret
+            key: username
+      - name: GIT_PASSWORD
+        valueFrom:
+          secretKeyRef:
+            name: taxonomy-repo-secret
+            key: password
+      resources:
+        requests:
+          memory: "4Gi"
+          cpu: "2"
+        limits:
+          memory: "8Gi"
+          cpu: "4"
+      volumeMounts:
+      - name: workspace
+        mountPath: /tmp
+        
+  - name: training-task
+    inputs:
+      parameters:
+      - name: base_model_path
+      - name: epochs
+      - name: learning_rate
+      - name: batch_size
+    container:
+      image: registry.redhat.io/ubi9/python-311:latest
+      command: ["/bin/bash"]
+      args:
+      - -c
+      - |
+        set -e
+        echo "=== Model Training Phase ==="
+        
+        # Install training dependencies
+        pip install torch transformers accelerate instructlab
+        
+        # Set up training environment
+        export CUDA_VISIBLE_DEVICES=0,1,2,3
+        
+        # Run training
+        echo "Starting InstructLab training..."
+        ilab model train \
+          --model-path /tmp/models \
+          --data-path /tmp/generated_data \
+          --output-dir /tmp/trained_model \
+          --num-epochs {{inputs.parameters.epochs}} \
+          --learning-rate {{inputs.parameters.learning_rate}} \
+          --batch-size {{inputs.parameters.batch_size}} \
+          --device auto
+        
+        echo "Model training completed successfully!"
+      env:
+      - name: AWS_ACCESS_KEY_ID
+        valueFrom:
+          secretKeyRef:
+            name: s3-credentials
+            key: AWS_ACCESS_KEY_ID
+      - name: AWS_SECRET_ACCESS_KEY
+        valueFrom:
+          secretKeyRef:
+            name: s3-credentials
+            key: AWS_SECRET_ACCESS_KEY
+      resources:
+        requests:
+          memory: "16Gi"
+          cpu: "4"
+          nvidia.com/gpu: "2"
+        limits:
+          memory: "32Gi"
+          cpu: "8"
+          nvidia.com/gpu: "4"
+      volumeMounts:
+      - name: workspace
+        mountPath: /tmp
+
+  - name: upload-task
+    inputs:
+      parameters:
+      - name: output_registry
+    container:
+      image: registry.redhat.io/ubi9/buildah:latest
+      command: ["/bin/bash"]
+      args:
+      - -c
+      - |
+        set -e
+        echo "=== Model Upload Phase ==="
+        
+        # Create model container image
+        echo "Creating model container..."
+        buildah bud -t {{inputs.parameters.output_registry}} -f - /tmp/trained_model << 'EOF'
+        FROM registry.redhat.io/ubi9/python-311:latest
+        COPY . /opt/model/
+        WORKDIR /opt/model
+        RUN pip install torch transformers instructlab
+        EXPOSE 8080
+        CMD ["python", "-m", "instructlab.serve", "--model-path", "/opt/model"]
+        EOF
+        
+        # Push to registry
+        echo "Pushing model to registry..."
+        buildah push {{inputs.parameters.output_registry}}
+        
+        echo "Model upload completed successfully!"
+      securityContext:
+        privileged: true
+      env:
+      - name: REGISTRY_AUTH_FILE
+        value: /tmp/.dockerconfigjson
+      resources:
+        requests:
+          memory: "4Gi"
+          cpu: "2"
+        limits:
+          memory: "8Gi"
+          cpu: "4"
+      volumeMounts:
+      - name: workspace
+        mountPath: /tmp
+      - name: registry-auth
+        mountPath: /tmp/.dockerconfigjson
+        subPath: .dockerconfigjson
+
+  volumes:
+  - name: workspace
+    emptyDir:
+      sizeLimit: 100Gi
+  - name: registry-auth
+    secret:
+      secretName: oci-output-push-secret

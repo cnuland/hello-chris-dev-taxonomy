@@ -1,0 +1,71 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  name: ilab-storage-sched-check
+  namespace: petloan-instructlab
+spec:
+  entrypoint: main
+  serviceAccountName: argo-workflow
+  podGC:
+    strategy: OnWorkflowCompletion
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: gp3
+        resources:
+          requests:
+            storage: 10Gi
+        volumeMode: Filesystem
+  templates:
+    - name: main
+      dag:
+        tasks:
+          - name: pvc-rwo
+            template: pvc-rwo
+          - name: cpu-task
+            dependencies: [pvc-rwo]
+            template: cpu-task
+          - name: cleanup
+            dependencies: [cpu-task]
+            template: cleanup
+    - name: pvc-rwo
+      container:
+        image: registry.access.redhat.com/ubi9/ubi-minimal:9.4
+        command: ["bash","-lc"]
+        args:
+          - |
+            echo "Writing file to PVC..."
+            mkdir -p /mnt/data && echo ok > /mnt/data/probe
+            ls -la /mnt/data
+        volumeMounts:
+          - name: data
+            mountPath: /mnt/data
+    - name: cpu-task
+      container:
+        image: registry.access.redhat.com/ubi9/ubi-minimal:9.4
+        command: ["bash","-lc"]
+        args:
+          - |
+            echo "Reading from PVC and sleeping..."
+            cat /mnt/data/probe
+            sleep 5
+        volumeMounts:
+          - name: data
+            mountPath: /mnt/data
+      resources:
+        limits:
+          cpu: "1"
+          memory: 1Gi
+        requests:
+          cpu: "0.25"
+          memory: 256Mi
+    - name: cleanup
+      container:
+        image: registry.access.redhat.com/ubi9/ubi-minimal:9.4
+        command: ["bash","-lc"]
+        args:
+          - |
+            echo cleanup
+
