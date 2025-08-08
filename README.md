@@ -214,29 +214,56 @@ train_resources:
 ### Step 3: Clone and Configure Project
 
 1. **Clone Repository**:
-   ```bash
-   git clone <this-repository-url>
-   cd hello-chris-dev-taxonomy
-   ```
+```bash
+git clone <this-repository-url>
+cd hello-chris-dev-taxonomy
+```
 
 2. **Extract Deployment Package**:
-   ```bash
-   cd dspa-deployment
-   # Or if using a packaged release:
-   # tar -xzf dspa-instructlab-deployment-*.tar.gz
-   # cd dspa-instructlab-deployment-*
-   ```
+```bash
+cd dspa-deployment
+# Or if using a packaged release:
+# tar -xzf dspa-instructlab-deployment-*.tar.gz
+# cd dspa-instructlab-deployment-*
+```
 
-3. **Configure Secrets**:
-   ```bash
-   # Edit the secrets template
-   vim 03-secrets.yaml
-   
-   # Update with your actual values:
-   # - Git repository credentials
-   # - Container registry credentials  
-   # - Model endpoint configurations
-   ```
+3. **Create Kubernetes Secrets (do NOT commit secrets to Git)**:
+
+Kubernetes Secrets must be created out-of-band. Use your own credentials; never hard-code them in manifests.
+
+- Taxonomy repository access (for private repos):
+```bash
+oc create secret generic taxonomy-repo-secret \
+  --from-literal=username="<your-git-username>" \
+  --from-literal=password="<your-git-token-or-password>" \
+  -n petloan-instructlab --dry-run=client -o yaml | oc apply -f -
+```
+
+- S3/MinIO credentials (referenced as s3-credentials):
+```bash
+oc create secret generic s3-credentials \
+  --from-literal=AWS_ACCESS_KEY_ID="<your-access-key-id>" \
+  --from-literal=AWS_SECRET_ACCESS_KEY="<your-secret-access-key>" \
+  --from-literal=AWS_DEFAULT_REGION="<your-region>" \
+  -n petloan-instructlab --dry-run=client -o yaml | oc apply -f -
+```
+
+- Container registry push secret (for build/push steps):
+```bash
+oc create secret generic oci-output-push-secret \
+  --from-file=.dockerconfigjson="${HOME}/.docker/config.json" \
+  --type=kubernetes.io/dockerconfigjson \
+  -n petloan-instructlab --dry-run=client -o yaml | oc apply -f -
+```
+
+4. **Configure Secret Templates (optional, templates only)**:
+```bash
+# Edit the secrets template (contains placeholders only)
+vim 03-secrets.yaml
+
+# Update placeholders if you plan to apply templates in a non-production environment.
+# Prefer creating secrets via 'oc create secret' as shown above.
+```
 
 ### Step 4: Deploy DSPA Infrastructure
 
